@@ -17,8 +17,14 @@ jobs:
     name: Build Quest 3 ARM64 APK
     runs-on: ubuntu-24.04
     steps:
-      - name: Check out TF2-VR
+      - name: Check out TF2-VR and Valve Source SDK
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Audit pinned TF2 source
+        shell: bash
+        run: bash scripts/audit-source-sdk.sh
 
       - name: Set up Java
         uses: actions/setup-java@v4
