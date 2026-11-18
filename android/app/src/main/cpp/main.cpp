@@ -15,6 +15,7 @@ namespace {
 struct App {
     android_app* android = nullptr;
     XrInstance instance = XR_NULL_HANDLE;
+    XrSystemId systemId = XR_NULL_SYSTEM_ID;
     XrSession session = XR_NULL_HANDLE;
     XrSpace localSpace = XR_NULL_HANDLE;
     XrSpace viewSpace = XR_NULL_HANDLE;
@@ -92,14 +93,13 @@ bool create_vulkan(App& a) {
     appInfo.engineVersion = 1;
     appInfo.apiVersion = VK_API_VERSION_1_1;
 
-    const char* instanceExtensions[] = {VK_KHR_ANDROID_SURFACE_EXTENSION_NAME};
     VkInstanceCreateInfo instanceInfo{VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO};
     instanceInfo.pApplicationInfo = &appInfo;
     instanceInfo.enabledExtensionCount = 0;
-    instanceInfo.ppEnabledExtensionNames = instanceExtensions;
+
 
     XrVulkanInstanceCreateInfoKHR xrInstanceInfo{XR_TYPE_VULKAN_INSTANCE_CREATE_INFO_KHR};
-    xrInstanceInfo.systemId = XR_NULL_PATH;
+    xrInstanceInfo.systemId = a.systemId;
     xrInstanceInfo.pfnGetInstanceProcAddr = vkGetInstanceProcAddr;
     xrInstanceInfo.vulkanCreateInfo = &instanceInfo;
     VkResult vkResult = VK_SUCCESS;
@@ -107,7 +107,7 @@ bool create_vulkan(App& a) {
                "xrCreateVulkanInstanceKHR") || !vk_ok(vkResult, "vkCreateInstance")) return false;
 
     XrVulkanGraphicsDeviceGetInfoKHR deviceInfo{XR_TYPE_VULKAN_GRAPHICS_DEVICE_GET_INFO_KHR};
-    deviceInfo.systemId = XR_NULL_PATH;
+    deviceInfo.systemId = a.systemId;
     deviceInfo.vulkanInstance = a.vkInstance;
     if (!xr_ok(getGraphicsDevice(a.instance, &deviceInfo, &a.physicalDevice),
                "xrGetVulkanGraphicsDevice2KHR")) return false;
@@ -143,7 +143,7 @@ bool create_vulkan(App& a) {
     deviceCreate.ppEnabledExtensionNames = deviceExtensions;
 
     XrVulkanDeviceCreateInfoKHR xrDeviceInfo{XR_TYPE_VULKAN_DEVICE_CREATE_INFO_KHR};
-    xrDeviceInfo.systemId = XR_NULL_PATH;
+    xrDeviceInfo.systemId = a.systemId;
     xrDeviceInfo.pfnGetInstanceProcAddr = vkGetInstanceProcAddr;
     xrDeviceInfo.vulkanPhysicalDevice = a.physicalDevice;
     xrDeviceInfo.vulkanCreateInfo = &deviceCreate;
@@ -203,8 +203,7 @@ bool create_actions(App& a) {
 bool create_session(App& a) {
     XrSystemGetInfo systemInfo{XR_TYPE_SYSTEM_GET_INFO};
     systemInfo.formFactor = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
-    XrSystemId systemId = XR_NULL_SYSTEM_ID;
-    if (!xr_ok(xrGetSystem(a.instance, &systemInfo, &systemId), "get HMD system")) return false;
+    if (!xr_ok(xrGetSystem(a.instance, &systemInfo, &a.systemId), "get HMD system")) return false;
 
     if (!create_vulkan(a)) return false;
 
@@ -228,7 +227,7 @@ bool create_session(App& a) {
     if (!xr_ok(xrCreateReferenceSpace(a.session, &spaceInfo, &a.viewSpace), "create view space")) return false;
 
     uint32_t count = 0;
-    if (!xr_ok(xrEnumerateViewConfigurationViews(a.instance, systemId, XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO, 0, &count, nullptr), "count stereo views")) return false;
+    if (!xr_ok(xrEnumerateViewConfigurationViews(a.instance, a.systemId, XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO, 0, &count, nullptr), "count stereo views")) return false;
     a.viewConfig.resize(count, {XR_TYPE_VIEW_CONFIGURATION_VIEW});
     a.views.resize(count, {XR_TYPE_VIEW});
     if (!xr_ok(xrEnumerateViewConfigurationViews(a.instance, systemId, XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO, count, &count, a.viewConfig.data()), "enumerate stereo views")) return false;
@@ -349,7 +348,7 @@ void android_main(android_app* state) {
     while (true) {
         int events = 0;
         android_poll_source* source = nullptr;
-        while (ALooper_pollOnce(app.sessionRunning ? 0 : -1, nullptr, &events,
+        while (ALooper_pollOnce(10, nullptr, &events,
                                 reinterpret_cast<void**>(&source)) >= 0) {
             if (source) source->process(state, source);
             if (state->destroyRequested) {
