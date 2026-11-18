@@ -125,7 +125,7 @@ bool create_vulkan(App& app) {
     }
 
     XrGraphicsRequirementsVulkan2KHR requirements{XR_TYPE_GRAPHICS_REQUIREMENTS_VULKAN2_KHR};
-    if (!xr_ok(getRequirements(app.instance, &requirements), "query OpenXR Vulkan requirements")) return false;
+    if (!xr_ok(getRequirements(app.instance, app.systemId, &requirements), "query OpenXR Vulkan requirements")) return false;
 
     const uint32_t requestedApi = VK_API_VERSION_1_1;
     const XrVersion requestedXrVersion = XR_MAKE_VERSION(1, 1, 0);
