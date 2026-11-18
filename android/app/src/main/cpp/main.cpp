@@ -291,7 +291,7 @@ bool create_eye_swapchains(App& app) {
         XrSwapchainCreateInfo swapchainInfo{XR_TYPE_SWAPCHAIN_CREATE_INFO};
         swapchainInfo.usageFlags = XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
         swapchainInfo.format = chosenFormat;
-        swapchainInfo.sampleCount = app.viewConfig[eyeIndex].recommendedSwapchainSampleCount;
+        swapchainInfo.sampleCount = 1;
         swapchainInfo.width = eye.width;
         swapchainInfo.height = eye.height;
         swapchainInfo.faceCount = 1;
