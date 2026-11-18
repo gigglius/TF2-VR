@@ -574,6 +574,8 @@ bool render_and_submit_frame(App& app) {
 
     update_touch_tracking(app, frameState.predictedDisplayTime);
 
+    update_touch_tracking(app, frameState.predictedDisplayTime);
+
     bool rendered = false;
     XrCompositionLayerProjection projectionLayer{XR_TYPE_COMPOSITION_LAYER_PROJECTION};
     const XrCompositionLayerBaseHeader* layers[] = {
