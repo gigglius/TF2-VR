@@ -503,8 +503,7 @@ void poll_openxr_events(App& app) {
 bool render_eye(App& app, uint32_t eyeIndex, uint32_t imageIndex) {
     EyeTarget& eye = app.eyes[eyeIndex];
     if (!vk_ok(vkWaitForFences(app.device, 1, &app.renderFence, VK_TRUE, UINT64_MAX),
-               "wait for previous render")) return false;
-    if (!vk_ok(vkResetFences(app.device, 1, &app.renderFence), "reset render fence") ||
+               "wait for previous render") ||
         !vk_ok(vkResetCommandBuffer(app.commandBuffer, 0), "reset render command buffer")) return false;
 
     VkCommandBufferBeginInfo beginInfo{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
@@ -558,7 +557,8 @@ bool render_eye(App& app, uint32_t eyeIndex, uint32_t imageIndex) {
     VkSubmitInfo submitInfo{VK_STRUCTURE_TYPE_SUBMIT_INFO};
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &app.commandBuffer;
-    if (!vk_ok(vkQueueSubmit(app.graphicsQueue, 1, &submitInfo, app.renderFence),
+    if (!vk_ok(vkResetFences(app.device, 1, &app.renderFence), "reset render fence") ||
+        !vk_ok(vkQueueSubmit(app.graphicsQueue, 1, &submitInfo, app.renderFence),
                "submit eye render")) return false;
     return vk_ok(vkWaitForFences(app.device, 1, &app.renderFence, VK_TRUE, UINT64_MAX),
                  "wait for eye render completion");
@@ -571,6 +571,8 @@ bool render_and_submit_frame(App& app) {
 
     XrFrameBeginInfo beginInfo{XR_TYPE_FRAME_BEGIN_INFO};
     if (!xr_ok(xrBeginFrame(app.session, &beginInfo), "begin XR frame")) return false;
+
+    update_touch_tracking(app, frameState.predictedDisplayTime);
 
     bool rendered = false;
     XrCompositionLayerProjection projectionLayer{XR_TYPE_COMPOSITION_LAYER_PROJECTION};
@@ -703,8 +705,8 @@ void destroy_app(App& app) {
     if (app.rightGripSpace) xrDestroySpace(app.rightGripSpace);
     if (app.viewSpace) xrDestroySpace(app.viewSpace);
     if (app.localSpace) xrDestroySpace(app.localSpace);
-    if (app.actionSet) xrDestroyActionSet(app.actionSet);
     if (app.session) xrDestroySession(app.session);
+    if (app.actionSet) xrDestroyActionSet(app.actionSet);
     if (app.instance) xrDestroyInstance(app.instance);
 
     if (app.renderFence) vkDestroyFence(app.device, app.renderFence, nullptr);
@@ -748,14 +750,7 @@ void android_main(android_app* state) {
         if (app.initialized) {
             poll_openxr_events(app);
             if (app.sessionRunning && app.resumed) {
-                XrFrameWaitInfo waitInfo{XR_TYPE_FRAME_WAIT_INFO};
-                XrFrameState frameState{XR_TYPE_FRAME_STATE};
-                // The frame function performs its own wait; this placeholder is intentionally unused.
-                (void)waitInfo;
-                (void)frameState;
                 render_and_submit_frame(app);
-                // Controller poses are synchronized and sampled at the predicted display time
-                // inside the frame loop in the next input integration pass.
             }
         }
     }
