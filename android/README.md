@@ -11,7 +11,7 @@ This is the native ARM64 platform layer for the TF2-VR Quest 3 project.
 - One OpenXR Vulkan color swapchain per eye, with Vulkan image views and framebuffers.
 - A Vulkan render pass that draws a visible calibration pattern into both eye images.
 - Stereo \`XrCompositionLayerProjection\` submission using the runtime's per-eye poses and FOVs.
-- Oculus Touch left/right grip-pose actions, per-frame pose sampling, and tracking diagnostics in logcat.
+- Oculus Touch left/right grip-pose actions, per-frame pose sampling, in-headset green/red tracking lamps, and logcat diagnostics.
 
 ## Status and limitations
 
