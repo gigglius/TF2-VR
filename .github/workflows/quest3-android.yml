@@ -26,6 +26,10 @@ jobs:
         shell: bash
         run: bash scripts/audit-source-sdk.sh
 
+      - name: Audit Source 1 engine availability
+        shell: bash
+        run: bash scripts/audit-source1-engine.sh
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
