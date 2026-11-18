@@ -59,6 +59,7 @@ struct App {
     bool leftControllerTracked = false;
     bool rightControllerTracked = false;
     bool trackingStatusLogged = false;
+    bool controllerStatusLogged = false;
     XrPosef leftControllerPose{};
     XrPosef rightControllerPose{};
 };
@@ -127,8 +128,9 @@ bool create_vulkan(App& app) {
     if (!xr_ok(getRequirements(app.instance, &requirements), "query OpenXR Vulkan requirements")) return false;
 
     const uint32_t requestedApi = VK_API_VERSION_1_1;
-    if (requestedApi < requirements.minApiVersionSupported ||
-        requestedApi > requirements.maxApiVersionSupported) {
+    const XrVersion requestedXrVersion = XR_MAKE_VERSION(1, 1, 0);
+    if (requestedXrVersion < requirements.minApiVersionSupported ||
+        requestedXrVersion > requirements.maxApiVersionSupported) {
         LOGE("Vulkan 1.1 is outside the runtime-supported Vulkan version range");
         return false;
     }
@@ -696,10 +698,11 @@ void update_touch_tracking(App& app, XrTime displayTime) {
         (rightLocation.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT);
     if (app.leftControllerTracked) app.leftControllerPose = leftLocation.pose;
     if (app.rightControllerTracked) app.rightControllerPose = rightLocation.pose;
-    if (app.leftControllerTracked && app.rightControllerTracked) {
+    if (app.leftControllerTracked && app.rightControllerTracked && !app.controllerStatusLogged) {
         LOGI("Both Touch controllers tracked; left=(%.2f, %.2f, %.2f), right=(%.2f, %.2f, %.2f)",
              app.leftControllerPose.position.x, app.leftControllerPose.position.y, app.leftControllerPose.position.z,
              app.rightControllerPose.position.x, app.rightControllerPose.position.y, app.rightControllerPose.position.z);
+        app.controllerStatusLogged = true;
     }
 }
 
