@@ -8,9 +8,9 @@ def openxrRoot = providers.gradleProperty("openxrSdkRoot")
         .get()
 
 def openxrLibCandidates = openxrRoot ? [
-        file("\${openxrRoot}/Libs/Android/arm64-v8a/Release"),
-        file("\${openxrRoot}/libs/android.arm64-v8a/Release"),
-        file("\${openxrRoot}/OpenXR/Libs/Android/arm64-v8a/Release")
+        file("${openxrRoot}/Libs/Android/arm64-v8a/Release"),
+        file("${openxrRoot}/libs/android.arm64-v8a/Release"),
+        file("${openxrRoot}/OpenXR/Libs/Android/arm64-v8a/Release")
 ] : []
 def openxrLibDir = openxrLibCandidates.find { new File(it, "libopenxr_loader.so").exists() }
 
@@ -32,7 +32,7 @@ android {
         externalNativeBuild {
             cmake {
                 cppFlags "-std=c++17 -Wall -Wextra"
-                arguments "-DOPENXR_SDK_ROOT=\${openxrRoot}"
+                arguments "-DOPENXR_SDK_ROOT=${openxrRoot}"
             }
         }
     }
