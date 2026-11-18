@@ -1,0 +1,112 @@
+name: Quest 3 Android APK
+
+on:
+  push:
+    branches:
+      - quest3/openxr-foundation
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-quest3:
+    name: Build Quest 3 ARM64 APK
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out TF2-VR and Valve Source SDK
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Audit pinned TF2 source
+        shell: bash
+        run: bash scripts/audit-source-sdk.sh
+
+      - name: Audit Source 1 engine availability
+        shell: bash
+        run: bash scripts/audit-source1-engine.sh
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Locate Android SDK command-line tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager -print -quit)"
+          if [ -z "$SDKMANAGER" ]; then
+            echo "sdkmanager not found under $ANDROID_HOME/cmdline-tools"
+            find "$ANDROID_HOME" -maxdepth 4 -type f -name sdkmanager -print || true
+            exit 1
+          fi
+          echo "$(dirname "$SDKMANAGER")" >> "$GITHUB_PATH"
+          echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
+          echo "Using $SDKMANAGER"
+
+      - name: Install Android build packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses || true
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018" "cmake;3.22.1"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Fetch generated OpenXR headers
+        uses: actions/checkout@v4
+        with:
+          repository: KhronosGroup/OpenXR-SDK
+          ref: release-1.1.59.1
+          path: openxr-headers
+
+      - name: Fetch Khronos Android OpenXR loader
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p openxr-sdk/include openxr-sdk/libs/android.arm64-v8a/Release openxr-sdk/jni/arm64-v8a
+          cp -R openxr-headers/include/openxr openxr-sdk/include/
+          curl --fail --location --retry 3 \
+            https://repo.maven.apache.org/maven2/org/khronos/openxr/openxr_loader_for_android/1.1.59.1/openxr_loader_for_android-1.1.59.1.aar \
+            --output openxr-loader.aar
+          unzip -q openxr-loader.aar -d openxr-aar
+          LOADER_SO="openxr-aar/jni/arm64-v8a/libopenxr_loader.so"
+          if [ ! -s "$LOADER_SO" ]; then
+            echo "Expected ARM64 OpenXR loader missing. Archive entries:"
+            unzip -l openxr-loader.aar
+            exit 1
+          fi
+          cp "$LOADER_SO" openxr-sdk/libs/android.arm64-v8a/Release/libopenxr_loader.so
+          cp "$LOADER_SO" openxr-sdk/jni/arm64-v8a/libopenxr_loader.so
+          test -s openxr-sdk/include/openxr/openxr.h
+          test -s openxr-sdk/include/openxr/openxr_platform.h
+          test -s openxr-sdk/libs/android.arm64-v8a/Release/libopenxr_loader.so
+          test -s openxr-sdk/jni/arm64-v8a/libopenxr_loader.so
+          echo "OpenXR headers and ARM64 loader staged successfully."
+
+      - name: Build debug APK
+        working-directory: android
+        env:
+          OPENXR_SDK_ROOT: ${{ github.workspace }}/openxr-sdk
+        run: |
+          gradle --no-daemon --stacktrace \
+            -PopenxrSdkRoot="$OPENXR_SDK_ROOT" \
+            :app:assembleDebug
+
+      - name: Upload Quest 3 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: TF2-VR-Quest3-debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14

@@ -1,0 +1,57 @@
+plugins {
+    id "com.android.application"
+}
+
+def openxrRoot = providers.gradleProperty("openxrSdkRoot")
+        .orElse(providers.environmentVariable("OPENXR_SDK_ROOT"))
+        .orElse("")
+        .get()
+
+def openxrLibCandidates = openxrRoot ? [
+        file("${openxrRoot}/Libs/Android/arm64-v8a/Release"),
+        file("${openxrRoot}/libs/android.arm64-v8a/Release"),
+        file("${openxrRoot}/OpenXR/Libs/Android/arm64-v8a/Release")
+] : []
+def openxrLibDir = openxrLibCandidates.find { new File(it, "libopenxr_loader.so").exists() }
+
+android {
+    namespace "com.gigglius.tf2vr"
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "com.gigglius.tf2vr"
+        minSdk 29
+        targetSdk 32
+        versionCode 1
+        versionName "0.1.0"
+
+        ndk {
+            abiFilters "arm64-v8a"
+        }
+
+        externalNativeBuild {
+            cmake {
+                cppFlags "-std=c++17 -Wall -Wextra"
+                arguments "-DOPENXR_SDK_ROOT=${openxrRoot}"
+            }
+        }
+    }
+
+    sourceSets {
+        main {
+            jniLibs.srcDirs = openxrRoot ? [file("${openxrRoot}/jni")] : []
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path file("src/main/cpp/CMakeLists.txt")
+            version "3.22.1"
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

@@ -1,53 +1,46 @@
 # TF2-VR — Team Fortress 2 for Meta Quest 3
 
-A research and development project exploring a standalone Android/ARM64 and OpenXR port of modern Team Fortress 2 for Meta Quest 3.
+A research project to bring the real Team Fortress 2 game to standalone Quest 3 using Android ARM64, Vulkan, and OpenXR. This is an engine-port effort, not a Unity remake.
 
-**Goal:** preserve the modern TF2 game experience—nine classes, weapons, maps, movement, and multiplayer—while adding native VR controls and stereoscopic rendering. This is an ambitious engine-porting project, not a Unity remake.
+## Current status
 
-## Status
+The Quest 3 OpenXR/Vulkan platform-test APK builds in GitHub Actions. The app has previously been installed and tested on a Quest 3, including head tracking and a brief controller haptic confirmation. The current APK does **not** run TF2 gameplay.
 
-Early planning / feasibility stage. No working Android engine build or APK exists yet.
+## Valve source integration
 
-## Source foundation
+- `third_party/source-sdk-2013` is pinned to Valve's official Source SDK 2013 repository at `e1f1fd42271805072f052051c26c21caa2c87b04`.
+- The official SDK includes TF2 client/server game code and shared SDK code.
+- A recursive inspection of the pinned tree found only `src/engine/audio/public/sound.h` under `src/engine` and zero engine implementation `.cpp` files. The complete Source 1 runtime is therefore **not present** in this checkout.
+- The Android app is currently an OpenXR/Vulkan shell; it has not compiled or linked the Source engine or TF2 client.
 
-- [Valve's Source SDK 2013](https://github.com/ValveSoftware/source-sdk-2013) now includes TF2 client and server game code.
-- The SDK is not a complete, ready-to-build Android engine. Its published build instructions target Windows and Linux/Steam Runtime. A Quest port will require substantial platform, renderer, input, audio, filesystem, and networking work.
-- Game content and binaries are not included here. Use content obtained through legitimate channels and do not commit proprietary TF2 assets, Steam credentials, or copyrighted game files.
+See [the Source 1 Android port audit](docs/source1-android-port-audit.md) for the verified blocker and legitimate next steps.
 
 ## Target
 
-- Device: Meta Quest 3 (standalone)
+- Device: Meta Quest 3 standalone
 - OS / ABI: Android, arm64-v8a
 - XR: OpenXR
-- Rendering: native stereoscopic VR, with performance profiling for Quest
-- Input: tracked Touch controllers, headset tracking, VR locomotion and weapon interaction
-- Game: modern TF2 code and compatible game content, subject to Valve's SDK license and applicable game terms
+- Graphics: Vulkan stereo rendering
+- Game: actual TF2 client/game code, subject to Valve's SDK license and game terms
 
 ## Milestones
 
-1. **Source audit:** map TF2 game-code dependencies to engine, platform, and Steam services; document build blockers.
-2. **Android shell:** create a minimal Android ARM64 app with native C++ and OpenXR session lifecycle.
-3. **Engine feasibility:** establish a reproducible Android toolchain and compile isolated engine dependencies.
-4. **First VR scene:** render a basic stereoscopic scene and verify head/controller tracking on Quest 3.
-5. **Game integration:** connect the Source engine/game layer, filesystem and authorized game content.
-6. **Gameplay:** implement VR weapon handling, locomotion, HUD interaction, and comfort settings.
-7. **Multiplayer:** validate networking, server compatibility, and platform-service constraints.
-8. **Optimization and release:** profile on-device, package APK, test install/update flow, and publish build instructions.
+1. Quest OpenXR/Vulkan shell — **builds; prior headset testing reported**
+2. Pin and audit Valve TF2 game code — **complete**
+3. Obtain an authorized complete Source 1 engine runtime — **blocked / required**
+4. Port and build that runtime for Android ARM64
+5. Link and launch the TF2 client in a basic Quest VR scene
+6. Implement VR hands, weapons, locomotion, HUD and comfort options
+7. Validate multiplayer/server compatibility and optimize for Quest 3
+8. Produce and test a distributable standalone APK
 
-## Repository layout (planned)
+## Repository layout
 
-- `docs/` — architecture, dependency audit, and milestone notes
-- `android/` — Android application and native platform layer
-- `native/` — platform-neutral VR and engine integration code
-- `.github/workflows/` — validation and build automation
+- `android/` — Android ARM64 NativeActivity and OpenXR/Vulkan platform layer
+- `third_party/source-sdk-2013/` — pinned Valve SDK submodule
+- `docs/` — architecture and porting notes
+- `.github/workflows/` — cloud Android builds
 
-## Development principles
+## Legal and content policy
 
-- Keep upstream Valve code separate from project-specific patches where practical.
-- Do not claim an APK/build works until it has been built and tested on-device.
-- Keep secrets and proprietary game files out of Git.
-- Record exact upstream revisions and reproducible build steps.
-
-## License
-
-This project must comply with the [Source 1 SDK License](https://github.com/ValveSoftware/source-sdk-2013/blob/master/LICENSE), Valve's applicable game terms, and the licenses of all third-party dependencies. Valve's SDK terms are non-commercial; review them before distributing source, binaries, or a mod. This repository does not grant rights to TF2 assets or trademarks.
+The Source 1 SDK license is non-commercial and has distribution conditions. Do not commit proprietary TF2 game assets, Steam credentials, leaked source or copyrighted game files. Users must supply legally obtained TF2 content. This repository does not grant rights to TF2 assets or trademarks.
