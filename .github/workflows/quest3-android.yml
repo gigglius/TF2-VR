@@ -64,7 +64,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p openxr-sdk/include openxr-sdk/libs/android.arm64-v8a/Release
+          mkdir -p openxr-sdk/include openxr-sdk/libs/android.arm64-v8a/Release openxr-sdk/jni/arm64-v8a
           cp -R openxr-headers/include/openxr openxr-sdk/include/
           curl --fail --location --retry 3 \
             https://repo.maven.apache.org/maven2/org/khronos/openxr/openxr_loader_for_android/1.1.59.1/openxr_loader_for_android-1.1.59.1.aar \
@@ -77,9 +77,11 @@ jobs:
             exit 1
           fi
           cp "$LOADER_SO" openxr-sdk/libs/android.arm64-v8a/Release/libopenxr_loader.so
+          cp "$LOADER_SO" openxr-sdk/jni/arm64-v8a/libopenxr_loader.so
           test -s openxr-sdk/include/openxr/openxr.h
           test -s openxr-sdk/include/openxr/openxr_platform.h
           test -s openxr-sdk/libs/android.arm64-v8a/Release/libopenxr_loader.so
+          test -s openxr-sdk/jni/arm64-v8a/libopenxr_loader.so
           echo "OpenXR headers and ARM64 loader staged successfully."
 
       - name: Build debug APK
