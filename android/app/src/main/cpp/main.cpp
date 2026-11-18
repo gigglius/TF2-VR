@@ -56,6 +56,11 @@ struct App {
     XrSessionState sessionState = XR_SESSION_STATE_UNKNOWN;
     bool sessionRunning = false;
     bool stereoReady = false;
+    bool leftControllerTracked = false;
+    bool rightControllerTracked = false;
+    bool trackingStatusLogged = false;
+    XrPosef leftControllerPose{};
+    XrPosef rightControllerPose{};
 };
 
 bool xr_ok(XrResult result, const char* operation) {
@@ -564,6 +569,8 @@ bool render_eye(App& app, uint32_t eyeIndex, uint32_t imageIndex) {
                  "wait for eye render completion");
 }
 
+void update_touch_tracking(App& app, XrTime displayTime);
+
 bool render_and_submit_frame(App& app) {
     XrFrameWaitInfo waitInfo{XR_TYPE_FRAME_WAIT_INFO};
     XrFrameState frameState{XR_TYPE_FRAME_STATE};
@@ -596,7 +603,7 @@ bool render_and_submit_frame(App& app) {
             (viewState.viewStateFlags & XR_VIEW_STATE_POSITION_VALID_BIT) != 0 &&
             (viewState.viewStateFlags & XR_VIEW_STATE_ORIENTATION_VALID_BIT) != 0) {
 
-            bool allEyesRendered = true;
+            if (!app.trackingStatusLogged) {\n                LOGI("Headset tracking valid; stereo views located");\n                app.trackingStatusLogged = true;\n            }\n\n            bool allEyesRendered = true;
             for (uint32_t eyeIndex = 0; eyeIndex < app.eyes.size(); ++eyeIndex) {
                 EyeTarget& eye = app.eyes[eyeIndex];
                 XrSwapchainImageAcquireInfo acquireInfo{XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO};
