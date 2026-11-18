@@ -7,6 +7,13 @@ def openxrRoot = providers.gradleProperty("openxrSdkRoot")
         .orElse("")
         .get()
 
+def openxrLibCandidates = openxrRoot ? [
+        file("\${openxrRoot}/Libs/Android/arm64-v8a/Release"),
+        file("\${openxrRoot}/libs/android.arm64-v8a/Release"),
+        file("\${openxrRoot}/OpenXR/Libs/Android/arm64-v8a/Release")
+] : []
+def openxrLibDir = openxrLibCandidates.find { new File(it, "libopenxr_loader.so").exists() }
+
 android {
     namespace "com.gigglius.tf2vr"
     compileSdk 35
@@ -25,14 +32,14 @@ android {
         externalNativeBuild {
             cmake {
                 cppFlags "-std=c++17 -Wall -Wextra"
-                arguments "-DOPENXR_SDK_ROOT=${openxrRoot}"
+                arguments "-DOPENXR_SDK_ROOT=\${openxrRoot}"
             }
         }
     }
 
     sourceSets {
         main {
-            jniLibs.srcDirs = openxrRoot ? ["${openxrRoot}/Libs/Android/arm64-v8a/Release"] : []
+            jniLibs.srcDirs = openxrLibDir ? [openxrLibDir] : []
         }
     }
 
