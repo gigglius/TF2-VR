@@ -39,7 +39,7 @@ android {
 
     sourceSets {
         main {
-            jniLibs.srcDirs = openxrLibDir ? [openxrLibDir] : []
+            jniLibs.srcDirs = openxrRoot ? [file("${openxrRoot}/jni")] : []
         }
     }
 
