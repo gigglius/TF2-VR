@@ -1,8 +1,8 @@
 #include <android/log.h>
 #include <android_native_app_glue.h>
+#include <vulkan/vulkan.h>
 #include <openxr/openxr.h>
 #include <openxr/openxr_platform.h>
-#include <vulkan/vulkan.h>
 
 #include <algorithm>
 #include <cstdint>
