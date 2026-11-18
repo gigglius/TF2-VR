@@ -6,7 +6,7 @@ A research and development project exploring a standalone Android/ARM64 and Open
 
 ## Status
 
-Early planning / feasibility stage. No working Android engine build or APK exists yet.
+Android/OpenXR bring-up source is in progress on [`quest3/openxr-foundation`](https://github.com/gigglius/TF2-VR/tree/quest3/openxr-foundation). The branch now contains an Android ARM64 NativeActivity, OpenXR session setup, Vulkan per-eye swapchains, a calibration-pattern projection layer, and Touch grip-pose sampling. It has **not yet been compiled or verified on a physical Quest 3**, and no APK is available yet.
 
 ## Source foundation
 
@@ -28,7 +28,7 @@ Early planning / feasibility stage. No working Android engine build or APK exist
 1. **Source audit:** map TF2 game-code dependencies to engine, platform, and Steam services; document build blockers.
 2. **Android shell:** create a minimal Android ARM64 app with native C++ and OpenXR session lifecycle.
 3. **Engine feasibility:** establish a reproducible Android toolchain and compile isolated engine dependencies.
-4. **First VR scene:** render a basic stereoscopic scene and verify head/controller tracking on Quest 3.
+4. **First VR scene:** complete and device-verify the Vulkan stereo calibration scene and head/controller tracking on Quest 3.
 5. **Game integration:** connect the Source engine/game layer, filesystem and authorized game content.
 6. **Gameplay:** implement VR weapon handling, locomotion, HUD interaction, and comfort settings.
 7. **Multiplayer:** validate networking, server compatibility, and platform-service constraints.
@@ -37,7 +37,7 @@ Early planning / feasibility stage. No working Android engine build or APK exist
 ## Repository layout (planned)
 
 - `docs/` — architecture, dependency audit, and milestone notes
-- `android/` — Android application and native platform layer
+- `android/` — Android application and native OpenXR/Vulkan platform layer (see [build and Quest test notes](android/README.md))
 - `native/` — platform-neutral VR and engine integration code
 - `.github/workflows/` — validation and build automation
 
