@@ -1,0 +1,79 @@
+name: Quest 3 Android APK
+
+on:
+  push:
+    branches:
+      - quest3/openxr-foundation
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-quest3:
+    name: Build Quest 3 ARM64 APK
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out TF2-VR
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android build packages
+        run: |
+          yes | sdkmanager --licenses >/dev/null
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018" "cmake;3.22.1"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Fetch OpenXR headers
+        uses: actions/checkout@v4
+        with:
+          repository: KhronosGroup/OpenXR-SDK-Source
+          ref: release-1.1.59.1
+          path: openxr-source
+
+      - name: Fetch Khronos Android OpenXR loader
+        run: |
+          set -euo pipefail
+          mkdir -p openxr-sdk/include openxr-sdk/libs/android.arm64-v8a/Release
+          cp -R openxr-source/include/openxr openxr-sdk/include/
+          curl --fail --location --retry 3 \
+            https://repo1.maven.org/maven2/org/khronos/openxr/openxr_loader_for_android/1.1.59.1/openxr_loader_for_android-1.1.59.1.aar \
+            --output openxr-loader.aar
+          unzip -q openxr-loader.aar 'jni/arm64-v8a/libopenxr_loader.so' -d openxr-aar
+          cp openxr-aar/jni/arm64-v8a/libopenxr_loader.so \
+            openxr-sdk/libs/android.arm64-v8a/Release/
+          test -s openxr-sdk/include/openxr/openxr.h
+          test -s openxr-sdk/libs/android.arm64-v8a/Release/libopenxr_loader.so
+
+      - name: Build debug APK
+        working-directory: android
+        env:
+          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
+          OPENXR_SDK_ROOT: ${{ github.workspace }}/openxr-sdk
+        run: |
+          gradle --no-daemon --stacktrace \
+            -PopenxrSdkRoot="$OPENXR_SDK_ROOT" \
+            :app:assembleDebug
+
+      - name: Upload Quest 3 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: TF2-VR-Quest3-debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
