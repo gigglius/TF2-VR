@@ -558,6 +558,28 @@ bool render_eye(App& app, uint32_t eyeIndex, uint32_t imageIndex) {
     markerRect.layerCount = 1;
     vkCmdClearAttachments(app.commandBuffer, 1, &marker, 1, &markerRect);
 
+    // Two status lamps in the headset view: green means that hand pose is currently valid.
+    const uint32_t lampSize = std::max(8u, eye.width / 48);
+    VkClearAttachment trackingLamp{};
+    trackingLamp.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    trackingLamp.colorAttachment = 0;
+    VkClearRect trackingRect{};
+    trackingRect.rect.extent = {lampSize, lampSize};
+    trackingRect.rect.offset = {static_cast<int32_t>(eye.width / 12),
+                                static_cast<int32_t>(eye.height / 12)};
+    trackingRect.baseArrayLayer = 0;
+    trackingRect.layerCount = 1;
+    trackingLamp.clearValue.color = app.leftControllerTracked
+        ? VkClearColorValue{{0.10f, 0.90f, 0.20f, 1.0f}}
+        : VkClearColorValue{{0.90f, 0.10f, 0.10f, 1.0f}};
+    vkCmdClearAttachments(app.commandBuffer, 1, &trackingLamp, 1, &trackingRect);
+
+    trackingRect.rect.offset.x += static_cast<int32_t>(lampSize * 2);
+    trackingLamp.clearValue.color = app.rightControllerTracked
+        ? VkClearColorValue{{0.10f, 0.90f, 0.20f, 1.0f}}
+        : VkClearColorValue{{0.90f, 0.10f, 0.10f, 1.0f}};
+    vkCmdClearAttachments(app.commandBuffer, 1, &trackingLamp, 1, &trackingRect);
+
     vkCmdEndRenderPass(app.commandBuffer);
     if (!vk_ok(vkEndCommandBuffer(app.commandBuffer), "end render command buffer")) return false;
 
