@@ -688,15 +688,19 @@ void update_touch_tracking(App& app, XrTime displayTime) {
     const XrResult leftResult = xrLocateSpace(app.leftGripSpace, app.localSpace, displayTime, &leftLocation);
     const XrResult rightResult = xrLocateSpace(app.rightGripSpace, app.localSpace, displayTime, &rightLocation);
 
-    const bool leftValid = leftState.isActive && XR_SUCCEEDED(leftResult) &&
+    app.leftControllerTracked = leftState.isActive && XR_SUCCEEDED(leftResult) &&
         (leftLocation.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) &&
         (leftLocation.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT);
-    const bool rightValid = rightState.isActive && XR_SUCCEEDED(rightResult) &&
+    app.rightControllerTracked = rightState.isActive && XR_SUCCEEDED(rightResult) &&
         (rightLocation.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) &&
         (rightLocation.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT);
-    // These poses are the tracked controller transforms consumed by the future weapon/hand layer.
-    (void)leftValid;
-    (void)rightValid;
+    if (app.leftControllerTracked) app.leftControllerPose = leftLocation.pose;
+    if (app.rightControllerTracked) app.rightControllerPose = rightLocation.pose;
+    if (app.leftControllerTracked && app.rightControllerTracked) {
+        LOGI("Both Touch controllers tracked; left=(%.2f, %.2f, %.2f), right=(%.2f, %.2f, %.2f)",
+             app.leftControllerPose.position.x, app.leftControllerPose.position.y, app.leftControllerPose.position.z,
+             app.rightControllerPose.position.x, app.rightControllerPose.position.y, app.rightControllerPose.position.z);
+    }
 }
 
 void destroy_app(App& app) {
