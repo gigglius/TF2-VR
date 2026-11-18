@@ -34,6 +34,7 @@ struct App {
     XrSpace viewSpace = XR_NULL_HANDLE;
     XrActionSet actionSet = XR_NULL_HANDLE;
     XrAction gripPoseAction = XR_NULL_HANDLE;
+    XrAction hapticAction = XR_NULL_HANDLE;
     XrPath leftHandPath = XR_NULL_PATH;
     XrPath rightHandPath = XR_NULL_PATH;
     XrSpace leftGripSpace = XR_NULL_HANDLE;
@@ -60,6 +61,8 @@ struct App {
     bool rightControllerTracked = false;
     bool trackingStatusLogged = false;
     bool controllerStatusLogged = false;
+    bool leftHapticTestSent = false;
+    bool rightHapticTestSent = false;
     XrPosef leftControllerPose{};
     XrPosef rightControllerPose{};
 };
@@ -371,23 +374,40 @@ bool create_actions(App& app) {
     if (!xr_ok(xrCreateAction(app.actionSet, &actionInfo, &app.gripPoseAction),
                "create Touch grip pose action")) return false;
 
+    XrActionCreateInfo hapticInfo{XR_TYPE_ACTION_CREATE_INFO};
+    hapticInfo.actionType = XR_ACTION_TYPE_VIBRATION_OUTPUT;
+    hapticInfo.countSubactionPaths = 2;
+    hapticInfo.subactionPaths = handPaths;
+    std::strncpy(hapticInfo.actionName, "hand_haptic", XR_MAX_ACTION_NAME_SIZE - 1);
+    std::strncpy(hapticInfo.localizedActionName, "Hand Haptics", XR_MAX_LOCALIZED_ACTION_NAME_SIZE - 1);
+    if (!xr_ok(xrCreateAction(app.actionSet, &hapticInfo, &app.hapticAction),
+               "create Touch haptic output action")) return false;
+
     XrPath interactionProfile = XR_NULL_PATH;
     XrPath leftPosePath = XR_NULL_PATH;
     XrPath rightPosePath = XR_NULL_PATH;
+    XrPath leftHapticPath = XR_NULL_PATH;
+    XrPath rightHapticPath = XR_NULL_PATH;
     if (!xr_ok(xrStringToPath(app.instance, "/interaction_profiles/oculus/touch_controller", &interactionProfile),
                "create Touch interaction profile path") ||
         !xr_ok(xrStringToPath(app.instance, "/user/hand/left/input/grip/pose", &leftPosePath),
                "create left grip binding path") ||
         !xr_ok(xrStringToPath(app.instance, "/user/hand/right/input/grip/pose", &rightPosePath),
-               "create right grip binding path")) return false;
+               "create right grip binding path") ||
+        !xr_ok(xrStringToPath(app.instance, "/user/hand/left/output/haptic", &leftHapticPath),
+               "create left haptic binding path") ||
+        !xr_ok(xrStringToPath(app.instance, "/user/hand/right/output/haptic", &rightHapticPath),
+               "create right haptic binding path")) return false;
 
     XrActionSuggestedBinding suggestedBindings[] = {
         {app.gripPoseAction, leftPosePath},
-        {app.gripPoseAction, rightPosePath}
+        {app.gripPoseAction, rightPosePath},
+        {app.hapticAction, leftHapticPath},
+        {app.hapticAction, rightHapticPath}
     };
     XrInteractionProfileSuggestedBinding bindings{XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING};
     bindings.interactionProfile = interactionProfile;
-    bindings.countSuggestedBindings = 2;
+    bindings.countSuggestedBindings = 4;
     bindings.suggestedBindings = suggestedBindings;
     if (!xr_ok(xrSuggestInteractionProfileBindings(app.instance, &bindings),
                "suggest Oculus Touch bindings")) return false;
@@ -688,6 +708,19 @@ bool render_and_submit_frame(App& app) {
     return xr_ok(xrEndFrame(app.session, &endInfo), "end XR frame");
 }
 
+bool pulse_controller_haptics(App& app, XrPath handPath, XrDuration duration,
+                             float amplitude, float frequency = XR_FREQUENCY_UNSPECIFIED) {
+    XrHapticVibration vibration{XR_TYPE_HAPTIC_VIBRATION};
+    vibration.duration = duration;
+    vibration.frequency = frequency;
+    vibration.amplitude = std::clamp(amplitude, 0.0f, 1.0f);
+    XrHapticActionInfo hapticInfo{XR_TYPE_HAPTIC_ACTION_INFO};
+    hapticInfo.action = app.hapticAction;
+    hapticInfo.subactionPath = handPath;
+    return xr_ok(xrApplyHapticFeedback(app.session, &hapticInfo,
+        reinterpret_cast<const XrHapticBaseHeader*>(&vibration)), "send controller rumble");
+}
+
 void update_touch_tracking(App& app, XrTime displayTime) {
     XrActiveActionSet activeSet{app.actionSet, XR_NULL_PATH};
     XrActionsSyncInfo syncInfo{XR_TYPE_ACTIONS_SYNC_INFO};
@@ -720,11 +753,20 @@ void update_touch_tracking(App& app, XrTime displayTime) {
         (rightLocation.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT);
     if (app.leftControllerTracked) app.leftControllerPose = leftLocation.pose;
     if (app.rightControllerTracked) app.rightControllerPose = rightLocation.pose;
+    if (app.leftControllerTracked && !app.leftHapticTestSent) {
+        if (pulse_controller_haptics(app, app.leftHandPath, 100 * 1000 * 1000LL, 0.30f))
+            app.leftHapticTestSent = true;
+    }
+    if (app.rightControllerTracked && !app.rightHapticTestSent) {
+        if (pulse_controller_haptics(app, app.rightHandPath, 100 * 1000 * 1000LL, 0.30f))
+            app.rightHapticTestSent = true;
+    }
     if (app.leftControllerTracked && app.rightControllerTracked && !app.controllerStatusLogged) {
         LOGI("Both Touch controllers tracked; left=(%.2f, %.2f, %.2f), right=(%.2f, %.2f, %.2f)",
              app.leftControllerPose.position.x, app.leftControllerPose.position.y, app.leftControllerPose.position.z,
              app.rightControllerPose.position.x, app.rightControllerPose.position.y, app.rightControllerPose.position.z);
         app.controllerStatusLogged = true;
+        LOGI("Sent short controller haptic confirmation pulses");
     }
 }
 
