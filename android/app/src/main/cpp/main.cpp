@@ -581,8 +581,6 @@ bool render_and_submit_frame(App& app) {
 
     update_touch_tracking(app, frameState.predictedDisplayTime);
 
-    update_touch_tracking(app, frameState.predictedDisplayTime);
-
     bool rendered = false;
     XrCompositionLayerProjection projectionLayer{XR_TYPE_COMPOSITION_LAYER_PROJECTION};
     const XrCompositionLayerBaseHeader* layers[] = {
@@ -603,7 +601,12 @@ bool render_and_submit_frame(App& app) {
             (viewState.viewStateFlags & XR_VIEW_STATE_POSITION_VALID_BIT) != 0 &&
             (viewState.viewStateFlags & XR_VIEW_STATE_ORIENTATION_VALID_BIT) != 0) {
 
-            if (!app.trackingStatusLogged) {\n                LOGI("Headset tracking valid; stereo views located");\n                app.trackingStatusLogged = true;\n            }\n\n            bool allEyesRendered = true;
+            if (!app.trackingStatusLogged) {
+                LOGI("Headset tracking valid; stereo views located");
+                app.trackingStatusLogged = true;
+            }
+
+            bool allEyesRendered = true;
             for (uint32_t eyeIndex = 0; eyeIndex < app.eyes.size(); ++eyeIndex) {
                 EyeTarget& eye = app.eyes[eyeIndex];
                 XrSwapchainImageAcquireInfo acquireInfo{XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO};
